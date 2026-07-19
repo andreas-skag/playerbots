@@ -16,6 +16,12 @@ def test_describe_sentiment_bands():
     assert describe_sentiment(0) == "a stranger"
     assert describe_sentiment(-10) == "someone you are wary of"
     assert describe_sentiment(-50) == "someone you dislike"
+    # exact band edges
+    assert describe_sentiment(60) == "a close friend"
+    assert describe_sentiment(25) == "a friend"
+    assert describe_sentiment(5) == "a friendly acquaintance"
+    assert describe_sentiment(-5) == "someone you are wary of"
+    assert describe_sentiment(-25) == "someone you dislike"
 
 
 def test_assemble_builds_system_and_user(tmp_path):
