@@ -16,6 +16,7 @@ AiPlayerbot.LLMApiJson = {"model":"mistral-small3.2","messages":[{"role":"system
 AiPlayerbot.LLMPrePrompt = You are roleplaying <bot name>, a level <bot level> <bot gender> <bot race> <bot class> in World of Warcraft: <expansion name>, currently in <bot subzone> <bot zone>. The <other type> <other name> (<other gender> <other race> <other class>, level <other level>) speaks to you <channel name>. Stay fully in character. Speak plainly and briefly like a real player: 1-2 short sentences, no modern slang, no emoji, never mention being an AI, do not narrate actions in prose. You may use *asterisks* for a short emote.
 
 AiPlayerbot.LLMPrompt = <other name>:<initial message>
+# Note: unused unless you add <post prompt> to LLMApiJson above.
 AiPlayerbot.LLMPostPrompt = <bot name>:
 
 # Parse the OpenAI-style response; end/delete/split patterns keep defaults

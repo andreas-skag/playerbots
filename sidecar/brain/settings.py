@@ -1,6 +1,6 @@
 """Sidecar configuration, loaded from an optional config.toml."""
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 
@@ -22,4 +22,10 @@ class Settings:
         p = Path(path)
         if not p.exists():
             return cls()
-        return cls(**tomllib.loads(p.read_text()))
+        data = tomllib.loads(p.read_text())
+        valid = {f.name for f in fields(cls)}
+        unknown = sorted(set(data) - valid)
+        if unknown:
+            raise ValueError(
+                f"Unknown key(s) in {p}: {', '.join(unknown)} — valid keys: {', '.join(sorted(valid))}")
+        return cls(**data)

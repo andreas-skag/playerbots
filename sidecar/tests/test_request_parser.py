@@ -55,3 +55,22 @@ def test_tolerates_junk_guid():
     body["meta"]["bot_guid"] = "<bot guid>"  # unsubstituted placeholder
     req = parse_request(body)
     assert req.bot_guid == 0
+
+
+def test_unsubstituted_placeholder_meta_treated_as_absent():
+    body = full_body()
+    body["meta"]["other_name"] = "<other name>"
+    body["meta"]["channel"] = "<channel name>"
+    req = parse_request(body)
+    assert req.other_name == "Andreas"  # falls back to speaker from user content
+    assert req.speaker_name == "Andreas"
+    assert req.channel == ""
+
+
+def test_null_meta_values_do_not_break_types():
+    body = full_body()
+    body["meta"]["bot_name"] = None
+    body["meta"]["event"] = None
+    req = parse_request(body)
+    assert req.bot_name == ""
+    assert req.event == "chat"

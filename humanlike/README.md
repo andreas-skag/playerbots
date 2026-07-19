@@ -18,6 +18,10 @@ ollama pull qwen3:14b          # lighter/faster alternative, worth A/B testing
 Keep whichever you prefer; put its exact tag in the `"model"` field of
 `AiPlayerbot.LLMApiJson`.
 
+Note: qwen3 models default to 'thinking' mode under Ollama, which slows
+replies and can leak reasoning text; prefer mistral-small3.2, or disable
+thinking if you use qwen3.
+
 ### 2. Configure the server
 
 - Open `aiplayerbot.conf` (next to `mangosd.exe`).
@@ -41,9 +45,10 @@ Keep whichever you prefer; put its exact tag in the `"model"` field of
    `/w <bot> co +debug llm` shows prompt/response details in whispers.
 
 Troubleshooting: no reply at all → check `mangosd` console for `BotLLM:`
-errors; `curl http://127.0.0.1:11434/v1/chat/completions -d
+errors; `curl.exe http://127.0.0.1:11434/v1/chat/completions -d
 "{\"model\":\"mistral-small3.2\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}"` 
-must return JSON with a `"content"` field.
+must return JSON with a `"content"` field. (PowerShell's built-in `curl`
+alias won't work — use `curl.exe`.)
 
 ## Milestone 2 — brain sidecar (personas + relationship memory)
 
@@ -62,6 +67,8 @@ CMake as usual). The only C++ change since M1 is one line in
 
 ### 2. Run the sidecar
 
+Requires Python 3.11+ on the target machine (`python --version`).
+
 ```powershell
 cd <checkout>\sidecar
 python -m venv .venv
@@ -70,10 +77,27 @@ copy config.example.toml config.toml   # then edit inner_circle etc.
 .venv\Scripts\uvicorn --factory brain.server:create_app --host 127.0.0.1 --port 8085
 ```
 
+Add your regular companion bots to `inner_circle` — party/guild/whisper chat
+always builds memory, but plain /say near a bot only does if the bot is
+listed.
+
 ### 3. Point the game server at it
 
 In `aiplayerbot.conf`, replace the two keys shown in
 `humanlike/conf/m2-sidecar.conf.example` (endpoint + ApiJson). Restart mangosd.
+
+### Note: character cards vs sidecar personas
+
+The sidecar generates a persona per bot automatically. If you kept M1's
+`llm_character_card.txt`, a bot with a card gets BOTH personalities in its
+prompt (the card via the server, the generated one via the sidecar) — they
+will often contradict each other. Pick one:
+
+- **Prefer the sidecar (recommended):** set
+  `AiPlayerbot.LLMDefaultPromptsFile =` (empty) in `aiplayerbot.conf`, or
+- **Keep your hand-written cards:** copy each card into the sidecar so it
+  replaces the generated persona:
+  `.venv\Scripts\python -c "from brain.memory import MemoryStore; MemoryStore('brain.db').set_persona(<guid>, 'Personality: ...your card text...')"`
 
 ### 4. Verify (M2 checklist)
 
