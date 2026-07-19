@@ -93,8 +93,14 @@ The sidecar generates a persona per bot automatically. If you kept M1's
 prompt (the card via the server, the generated one via the sidecar) — they
 will often contradict each other. Pick one:
 
-- **Prefer the sidecar (recommended):** set
-  `AiPlayerbot.LLMDefaultPromptsFile =` (empty) in `aiplayerbot.conf`, or
+- **Prefer the sidecar (recommended):** blank the card text while keeping
+  the file configured — edit `llm_character_card.txt` so each line is just
+  the name (e.g. `Grimtok::` with nothing after the `::`) and restart; the
+  loader then replaces the stored card with empty text. (Just emptying
+  `AiPlayerbot.LLMDefaultPromptsFile` is NOT enough — already-loaded cards
+  persist in the `ai_playerbot_db_store` table. Alternatively purge them
+  directly: `DELETE FROM ai_playerbot_db_store WHERE value LIKE 'manual
+  saved string::llmdefaultprompt>%';` on the characters DB.)
 - **Keep your hand-written cards:** copy each card into the sidecar so it
   replaces the generated persona:
   `.venv\Scripts\python -c "from brain.memory import MemoryStore; MemoryStore('brain.db').set_persona(<guid>, 'Personality: ...your card text...')"`
