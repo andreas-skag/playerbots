@@ -62,13 +62,16 @@ class MemoryStore:
         return row[0] if row else 0.0
 
     def adjust_sentiment(self, bot_guid: int, other_guid: int, delta: float) -> float:
-        new = max(-100.0, min(100.0, self.sentiment(bot_guid, other_guid) + delta))
         self.conn.execute(
-            "INSERT INTO sentiment(bot_guid, other_guid, score) VALUES(?,?,?)"
-            " ON CONFLICT(bot_guid, other_guid) DO UPDATE SET score=excluded.score",
-            (bot_guid, other_guid, new))
+            "INSERT INTO sentiment(bot_guid, other_guid, score) VALUES(?,?,0)"
+            " ON CONFLICT(bot_guid, other_guid) DO NOTHING",
+            (bot_guid, other_guid))
+        self.conn.execute(
+            "UPDATE sentiment SET score = MAX(-100.0, MIN(100.0, score + ?))"
+            " WHERE bot_guid=? AND other_guid=?",
+            (delta, bot_guid, other_guid))
         self.conn.commit()
-        return new
+        return self.sentiment(bot_guid, other_guid)
 
     def summary(self, bot_guid: int, other_guid: int) -> tuple[str, int]:
         row = self.conn.execute(
