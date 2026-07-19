@@ -14,7 +14,7 @@ Bots on a singleplayer vanilla server that feel human:
 
 Explicitly out of scope: gear-inspection reactions, per-action LLM combat control (latency-infeasible), upstream-friendliness constraints.
 
-**Depth tiers:** full treatment (memory, relationships, initiative, tactics) for the "inner circle" — party/guild bots, ~5–40, auto-detected plus a config list of GUIDs. Nearby world bots get cheap stateless persona-only banter. Everything keys on character GUID so memory survives restarts.
+**Depth tiers:** full treatment (memory, relationships, initiative, tactics) for the "inner circle" — ~5–40 bots. Membership: any bot currently in the player's group or guild (checked per request), plus a static GUID list in the sidecar config. Once a bot has memory it keeps it, even after leaving the group. Nearby world bots get cheap stateless persona-only banter. Everything keys on character GUID so memory survives restarts.
 
 ## Architecture
 
