@@ -40,7 +40,6 @@ def create_app(settings: Settings | None = None, store: MemoryStore | None = Non
             now = time.monotonic()
             if req.bot_guid and now - last_generation.get(req.bot_guid, -1e9) < settings.per_bot_cooldown:
                 return _completion("")
-            last_generation[req.bot_guid] = now
 
             inner = personas.is_inner_circle(req, settings)
             persona = personas.get_persona(store, req.bot_guid, req.bot_name)
@@ -55,6 +54,7 @@ def create_app(settings: Settings | None = None, store: MemoryStore | None = Non
             messages = prompts.assemble(settings.templates_dir, persona, summary,
                                         score, recent, req)
             reply = await ollama.chat(messages, tier="inner" if inner else "ambient")
+            last_generation[req.bot_guid] = now
 
             if reply and inner and req.bot_guid and req.other_guid:
                 store.record_interaction(req.bot_guid, req.other_guid, req.other_name,

@@ -101,3 +101,23 @@ def test_requests_are_logged_for_replay(tmp_path):
     lines = (tmp_path / "req.jsonl").read_text().strip().splitlines()
     assert len(lines) == 1
     assert json.loads(lines[0])["body"]["meta"]["bot_name"] == "Grimtok"
+
+
+def test_failed_generation_does_not_start_cooldown(tmp_path):
+    class Flaky:
+        def __init__(self):
+            self.calls = 0
+
+        async def chat(self, messages, tier="inner"):
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("ollama down")
+            return "Back now, whelp."
+
+    flaky = Flaky()
+    client, _ = make_client(tmp_path, flaky, per_bot_cooldown=60.0)
+    r1 = client.post("/v1/chat/completions", json=body())
+    r2 = client.post("/v1/chat/completions", json=body())
+    assert r1.json()["choices"][0]["message"]["content"] == ""
+    assert r2.json()["choices"][0]["message"]["content"] == "Back now, whelp."
+    assert flaky.calls == 2
