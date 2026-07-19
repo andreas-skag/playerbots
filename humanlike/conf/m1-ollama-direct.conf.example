@@ -1,0 +1,35 @@
+# ── Milestone 1: LLM chat direct to Ollama ─────────────────────────────
+# Paste this block into aiplayerbot.conf on the target machine
+# (replacing any existing AiPlayerbot.LLM* lines).
+
+# 2 = 'ai chat' strategy on for all bots by default
+AiPlayerbot.LLMEnabled = 2
+
+# Ollama's OpenAI-compatible endpoint
+AiPlayerbot.LLMApiEndpoint = http://127.0.0.1:11434/v1/chat/completions
+AiPlayerbot.LLMApiKey =
+
+# Request template. <pre prompt>/<context>/<prompt> are filled by the server.
+AiPlayerbot.LLMApiJson = {"model":"mistral-small3.2","messages":[{"role":"system","content":"<pre prompt> <context>"},{"role":"user","content":"<prompt>"}],"max_tokens":120,"stream":false}
+
+# Tuned system prompt (single line!)
+AiPlayerbot.LLMPrePrompt = You are roleplaying <bot name>, a level <bot level> <bot gender> <bot race> <bot class> in World of Warcraft: <expansion name>, currently in <bot subzone> <bot zone>. The <other type> <other name> (<other gender> <other race> <other class>, level <other level>) speaks to you <channel name>. Stay fully in character. Speak plainly and briefly like a real player: 1-2 short sentences, no modern slang, no emoji, never mention being an AI, do not narrate actions in prose. You may use *asterisks* for a short emote.
+
+AiPlayerbot.LLMPrompt = <other name>:<initial message>
+AiPlayerbot.LLMPostPrompt = <bot name>:
+
+# Parse the OpenAI-style response; end/delete/split patterns keep defaults
+AiPlayerbot.LLMResponseStartPattern = ("content":\s*")
+
+AiPlayerbot.LLMContextLength = 4096
+AiPlayerbot.LLMGenerationTimeout = 60
+AiPlayerbot.LLMMaxSimultaniousGenerations = 4
+
+# Occasional bot-to-bot banter (percent chance to reply to another bot)
+AiPlayerbot.LLMBotToBotChatChance = 5
+
+# Bots chat with NPCs during rpg behavior
+AiPlayerbot.LLMRpgAIChatChance = 20
+
+# Per-bot personality cards (Task 2), file placed next to the server binary
+AiPlayerbot.LLMDefaultPromptsFile = llm_character_card.txt
