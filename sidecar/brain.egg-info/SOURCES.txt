@@ -1,7 +1,0 @@
-pyproject.toml
-brain/__init__.py
-brain.egg-info/PKG-INFO
-brain.egg-info/SOURCES.txt
-brain.egg-info/dependency_links.txt
-brain.egg-info/requires.txt
-brain.egg-info/top_level.txt

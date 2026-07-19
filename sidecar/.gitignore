@@ -3,3 +3,4 @@ __pycache__/
 *.db
 requests.jsonl
 config.toml
+*.egg-info/
