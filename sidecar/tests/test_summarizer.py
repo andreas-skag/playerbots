@@ -51,3 +51,20 @@ def test_swallows_bad_llm_output():
     fake = FakeOllama("total nonsense")
     assert asyncio.run(maybe_summarize(store, fake, 42, 7, "Grimtok", "Andreas", 3)) is False
     assert store.summary(42, 7) == ("", 0)
+
+
+def test_extract_json_ignores_trailing_braces():
+    reply = '{"summary": "ok", "sentiment_delta": 1} — try the {AoE} build'
+    assert extract_json(reply) == {"summary": "ok", "sentiment_delta": 1}
+
+
+def test_swallows_real_exception():
+    store = seeded_store(3)
+
+    class ExplodingOllama:
+        async def chat(self, messages, tier="inner"):
+            raise RuntimeError("ollama down")
+
+    assert asyncio.run(
+        maybe_summarize(store, ExplodingOllama(), 42, 7, "Grimtok", "Andreas", 3)) is False
+    assert store.summary(42, 7) == ("", 0)

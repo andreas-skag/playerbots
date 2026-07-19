@@ -1,7 +1,6 @@
 """Compress old interactions into a summary and drift sentiment accordingly."""
 import json
 import logging
-import re
 
 from .memory import MemoryStore
 
@@ -21,13 +20,16 @@ Reply with ONLY a JSON object:
 
 
 def extract_json(text: str) -> dict:
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if not match:
-        return {}
-    try:
-        return json.loads(match.group(0))
-    except json.JSONDecodeError:
-        return {}
+    decoder = json.JSONDecoder()
+    for i, ch in enumerate(text):
+        if ch == "{":
+            try:
+                obj, _ = decoder.raw_decode(text[i:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                return obj
+    return {}
 
 
 async def maybe_summarize(store: MemoryStore, ollama, bot_guid: int, other_guid: int,
