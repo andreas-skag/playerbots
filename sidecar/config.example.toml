@@ -1,0 +1,12 @@
+# Copy to sidecar/config.toml on the target machine and adjust.
+ollama_url = "http://127.0.0.1:11434"
+chat_model = "mistral-small3.2"   # inner-circle bots
+utility_model = "qwen3:4b"        # ambient banter + memory summarization
+db_path = "brain.db"
+templates_dir = "templates"
+# Bots that always get the full treatment even outside party/guild chat:
+inner_circle = ["Grimtok", "Elaria"]
+max_concurrent = 4        # global cap on simultaneous Ollama generations
+per_bot_cooldown = 2.0    # min seconds between generations for one bot
+summarize_after = 30
+request_log = "requests.jsonl"

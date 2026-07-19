@@ -45,4 +45,51 @@ errors; `curl http://127.0.0.1:11434/v1/chat/completions -d
 "{\"model\":\"mistral-small3.2\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}"` 
 must return JSON with a `"content"` field.
 
-(M2 section is appended by Task 12.)
+## Milestone 2 — brain sidecar (personas + relationship memory)
+
+Requires: M1 working, this branch's server rebuilt (adds `<bot guid>` /
+`<other guid>` placeholders), and models from M1 plus:
+
+```powershell
+ollama pull qwen3:4b   # small utility model
+```
+
+### 1. Rebuild the server
+
+Rebuild `mangosd` from this branch on the target machine (Visual Studio /
+CMake as usual). The only C++ change since M1 is one line in
+`playerbot/strategy/actions/SayAction.cpp`.
+
+### 2. Run the sidecar
+
+```powershell
+cd <checkout>\sidecar
+python -m venv .venv
+.venv\Scripts\pip install -e .
+copy config.example.toml config.toml   # then edit inner_circle etc.
+.venv\Scripts\uvicorn --factory brain.server:create_app --host 127.0.0.1 --port 8085
+```
+
+### 3. Point the game server at it
+
+In `aiplayerbot.conf`, replace the two keys shown in
+`humanlike/conf/m2-sidecar.conf.example` (endpoint + ApiJson). Restart mangosd.
+
+### 4. Verify (M2 checklist)
+
+1. Party up with a bot, chat in /p → reply arrives AND `brain.db` appears in
+   `sidecar/`; `requests.jsonl` grows by one line per message.
+2. Reply reflects a persona (`Personality:` card auto-generated per bot —
+   inspect with `.venv\Scripts\python -c "from brain.memory import MemoryStore; print(MemoryStore('brain.db').get_persona(<guid>))"`).
+3. Say something memorable ("I'll give you this axe"), chat ~30 more
+   exchanges → summary appears (check `summaries` table) and the bot can
+   reference it in later replies.
+4. **Restart everything** (mangosd + sidecar), whisper the same bot →
+   it still knows you (summary + sentiment survived).
+5. Chat from world chat as a stranger to a non-inner-circle bot → reply
+   still comes (ambient tier) but `interactions` gains no row.
+6. Kill the sidecar mid-session → bots go silent but nothing crashes;
+   restart sidecar → chat resumes.
+7. Prompt iteration: edit `sidecar/templates/chat.txt`, then
+   `.venv\Scripts\python -m brain.replay requests.jsonl` — the last real
+   request replays against the new template without touching the game.
