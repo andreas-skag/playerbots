@@ -41,6 +41,7 @@
 #include "Guilds/GuildMgr.h"
 #include "Chat/ChannelMgr.h"
 #include "PlayerbotLLMInterface.h"
+#include "playerbot/LLMDirectiveHandler.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -1157,6 +1158,12 @@ void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
         {
             chatReplies.push(*i);
         }
+    }
+    // conversational-command directives parsed from sidecar replies (M3)
+    if (sPlayerbotAIConfig.llmCommandsEnabled)
+    {
+        for (const PendingDirective& directive : LLMDirectiveHandler::Drain(bot->GetObjectGuid().GetCounter()))
+            LLMDirectiveHandler::Execute(bot, this, directive);
     }
     // logout if logout timer is ready or if instant logout is possible
     if (bot->IsStunnedByLogout() || bot->GetSession()->isLogingOut())
