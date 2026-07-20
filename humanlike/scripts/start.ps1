@@ -20,7 +20,7 @@ $RepoRoot   = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $SidecarDir = Join-Path $RepoRoot "sidecar"
 
 if ($Milestone -eq "Auto") {
-    if (Test-Path (Join-Path $SidecarDir "config.toml")) { $Milestone = "M2" } else { $Milestone = "M1" }
+    if (Test-Path (Join-Path $SidecarDir ".venv\Scripts\uvicorn.exe")) { $Milestone = "M2" } else { $Milestone = "M1" }
     Write-Status "info" "Milestone auto-detected: $Milestone"
 }
 

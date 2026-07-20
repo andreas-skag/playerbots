@@ -156,5 +156,6 @@ will often contradict each other. Pick one:
 8. Script check: run `setup.ps1 -Milestone M2` a second time — every step
    should print `[skipped]` or `[done]` with no duplicate LLM block in
    `aiplayerbot.conf` (search for exactly one `BEGIN humanlike-llm block`).
-9. Script check: run `start.ps1` while everything is already running — all
-   services should report `[ok] ... already running`.
+9. Script check: run `start.ps1` while everything is already running - Ollama
+   reports `[ok] Ollama is up` and the other services report
+   `[ok] ... already running`.

@@ -69,7 +69,12 @@ if ($Milestone -eq "M2") {
         Write-Status "FAILED" "python not found. Install Python 3.11+ from https://www.python.org/downloads/ and re-run."
         exit 1
     }
-    $pyVersion = (& python -c "import sys; print('%d.%d' % sys.version_info[:2])").Trim()
+    $pyVersion = & python -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null
+    if ($pyVersion) { $pyVersion = "$pyVersion".Trim() }
+    if (-not $pyVersion -or $pyVersion -notmatch '^\d+\.\d+$') {
+        Write-Status "FAILED" "python did not run (Windows Store alias?). Install Python 3.11+ from https://www.python.org/downloads/ and re-run."
+        exit 1
+    }
     $pyParts = $pyVersion.Split('.')
     if ([int]$pyParts[0] -lt 3 -or ([int]$pyParts[0] -eq 3 -and [int]$pyParts[1] -lt 11)) {
         Write-Status "FAILED" "Python 3.11+ required, found $pyVersion"
@@ -161,6 +166,11 @@ $cardDst = Join-Path $ServerDir "llm_character_card.txt"
 if ((Test-Path $cardDst) -and ((Get-Item $cardDst).LastWriteTime -gt (Get-Item $cardSrc).LastWriteTime)) {
     Write-Status "skipped" "Server card file is newer than the repo copy - keeping your edits"
 } else {
+    if (Test-Path $cardDst) {
+        $cardBackup = "$cardDst.bak-" + (Get-Date -Format "yyyyMMdd-HHmmss")
+        Copy-Item $cardDst $cardBackup
+        Write-Status "done" "Card backup written: $cardBackup"
+    }
     Copy-Item $cardSrc $cardDst
     Write-Status "done" "Character cards deployed to server directory"
 }

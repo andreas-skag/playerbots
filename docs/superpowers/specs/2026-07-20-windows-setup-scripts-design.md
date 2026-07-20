@@ -41,7 +41,7 @@ Steps, each idempotent with a `[done]/[skipped]/[FAILED]` status line:
 
 ### start.ps1
 
-Parameters: `-Server` (also start mangosd+realmd), `-Milestone M1|M2` (default: infer M2 if `sidecar\config.toml` exists).
+Parameters: `-Server` (also start mangosd+realmd), `-Milestone M1|M2` (default: infer M2 if the sidecar venv exists — `sidecar\.venv\Scripts\uvicorn.exe`; config.toml is unsuitable because pick-bots.ps1 creates it even for M1 users).
 
 1. Ollama: GET `http://127.0.0.1:11434/api/tags`; if unreachable, start `ollama serve` in a new window and poll up to 30 s. ✓/✗ line.
 2. M2: start sidecar in a new window (`.venv\Scripts\uvicorn --factory brain.server:create_app --host 127.0.0.1 --port 8085`, cwd `sidecar\`); poll TCP 8085 up to 15 s. Skip cleanly in M1 mode.
