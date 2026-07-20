@@ -69,7 +69,12 @@ if ($Milestone -eq "M2") {
         Write-Status "FAILED" "python not found. Install Python 3.11+ from https://www.python.org/downloads/ and re-run."
         exit 1
     }
-    $pyVersion = & python -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null
+    $pyVersion = $null
+    try {
+        $pyVersion = & python -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null
+    } catch {
+        $pyVersion = $null
+    }
     if ($pyVersion) { $pyVersion = "$pyVersion".Trim() }
     if (-not $pyVersion -or $pyVersion -notmatch '^\d+\.\d+$') {
         Write-Status "FAILED" "python did not run (Windows Store alias?). Install Python 3.11+ from https://www.python.org/downloads/ and re-run."
