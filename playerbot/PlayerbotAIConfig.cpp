@@ -743,6 +743,12 @@ bool PlayerbotAIConfig::Initialize()
     for (auto& channelName : blockedChannels)
         llmBlockedReplyChannels.insert(sourceName[channelName]);
 
+    llmCommandsEnabled = config.GetIntDefault("AiPlayerbot.LLMCommands.Enable", 0);
+    llmCommandTrustedGuids.clear();
+    std::list<uint32> llmCommandTrustedList;
+    LoadList<std::list<uint32>>(config.GetStringDefault("AiPlayerbot.LLMCommands.TrustedGuids", ""), llmCommandTrustedList);
+    llmCommandTrustedGuids.insert(llmCommandTrustedList.begin(), llmCommandTrustedList.end());
+
     {
         std::string promptsFile = config.GetStringDefault("AiPlayerbot.LLMDefaultPromptsFile", "llm_character_card");
         LoadLLMDefaultPrompts(promptsFile);

@@ -4,6 +4,7 @@
 #include "Talentspec.h"
 #include "Globals/SharedDefines.h"
 #include "SystemConfig.h"
+#include <unordered_set>
 
 class Player;
 class PlayerbotMgr;
@@ -400,8 +401,10 @@ public:
     std::string llmApiEndpoint, llmApiKey, llmApiJson, llmPrePrompt, llmPreRpgPrompt, llmPrompt, llmPostPrompt, llmResponseStartPattern, llmResponseEndPattern, llmResponseDeletePattern, llmResponseSplitPattern;
     uint32 llmEnabled, llmContextLength, llmBotToBotChatChance, llmGenerationTimeout, llmMaxSimultaniousGenerations, llmRpgAIChatChance;
     bool llmGlobalContext;
+    bool llmCommandsEnabled;
     ParsedUrl llmEndPointUrl;
     std::set<uint32> llmBlockedReplyChannels;
+    std::unordered_set<uint32> llmCommandTrustedGuids;
     //LM END
 
     uint32 EatDrinkMinDistance = 5;
