@@ -2,7 +2,11 @@
 
 Single-threaded by construction: FastAPI runs one event loop, and every
 registry mutation happens synchronously between awaits, so no locks.
+Concurrent requests for the same utterance share a single classification
+via asyncio.Future; all callers await the same result.
 """
+import asyncio
+import logging
 import time
 from dataclasses import dataclass
 
@@ -10,6 +14,8 @@ from . import intent as intent_mod
 from .intent import Intent
 from .request_parser import BotRequest
 from .settings import Settings
+
+log = logging.getLogger(__name__)
 
 _COMMAND_CHANNELS = {"in party chat", "in raid chat"}
 _WHISPER = "in private message"
@@ -39,6 +45,15 @@ _DESCRIPTIONS = {
 }
 
 
+async def _swallow(coro):
+    """Classify and swallow exceptions; treat failures as no command."""
+    try:
+        return await coro
+    except Exception:
+        log.exception("intent classification failed; treating as no command")
+        return None
+
+
 @dataclass
 class Decision:
     role: str                 # "actor" | "bystander" | "refused" | "none"
@@ -48,7 +63,7 @@ class Decision:
 class DedupRegistry:
     def __init__(self, window_s: float):
         self.window_s = window_s
-        self._intents: dict[tuple, tuple[float, "Intent | None"]] = {}
+        self._intents: dict[tuple, tuple[float, asyncio.Future]] = {}
         self._actors: dict[int, float] = {}
 
     def _expire(self, now: float) -> None:
@@ -60,15 +75,12 @@ class DedupRegistry:
     async def get_or_classify(self, key: tuple, coro_factory):
         now = time.monotonic()
         self._expire(now)
-        if key in self._intents:
-            return self._intents[key][1]
-        # Reserve the slot before awaiting so concurrent requests for the
-        # same utterance don't classify twice; they briefly see None, which
-        # only costs a missed bystander note.
-        self._intents[key] = (now, None)
-        result = await coro_factory()
-        self._intents[key] = (now, result)
-        return result
+        if key not in self._intents:
+            # Synchronous insert before the first await, so concurrent
+            # requests for the same utterance all share one classification.
+            self._intents[key] = (now, asyncio.ensure_future(_swallow(coro_factory())))
+        future = self._intents[key][1]
+        return await future
 
     def record_actor(self, bot_guid: int) -> None:
         self._actors[bot_guid] = time.monotonic()
@@ -100,7 +112,10 @@ def _pick_actor(req: BotRequest, intent: Intent, settings: Settings) -> int:
     candidates = [m for m in req.group
                   if m.guid != req.other_guid and str(m.guid) not in settings.player_guids]
     if not candidates:
-        return req.bot_guid
+        # Empty roster (missing group meta) degrades to whisper-like
+        # semantics: act ourselves. A roster with no routable bots
+        # (only players/the speaker) routes to nobody.
+        return req.bot_guid if not req.group else 0
     for cls in _CLASS_FIT.get(intent.verb, []):
         for m in sorted(candidates, key=lambda m: m.guid):
             if m.cls == cls:

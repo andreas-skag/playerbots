@@ -1,5 +1,4 @@
 import asyncio
-import json
 
 from brain import commands
 from brain.intent import Intent
@@ -113,3 +112,40 @@ def test_directive_json_and_describe():
     assert commands.describe(Intent(verb="attack", args={"mark": "skull"})) == \
         "attack the skull target"
     assert commands.describe(Intent(verb="role_tank")) == "switch to tanking"
+
+
+def test_concurrent_bots_share_one_classification():
+    registry = commands.DedupRegistry(3.0)
+    store = MemoryStore(":memory:")
+    settings = _settings()
+
+    class SlowOllama(FakeOllama):
+        async def chat(self, messages, tier="inner", format=None):
+            self.calls += 1
+            await asyncio.sleep(0.01)
+            return self.reply
+
+    fake = SlowOllama()
+
+    async def run():
+        return await asyncio.gather(
+            commands.decide(registry, fake, settings, store, _req(bot_guid="42")),
+            commands.decide(registry, fake, settings, store, _req(bot_guid="43")))
+
+    warrior, priest = asyncio.run(run())
+    assert warrior.role == "actor"
+    assert priest.role == "bystander"
+    assert fake.calls == 1
+
+
+def test_no_routable_candidates_means_no_actor():
+    # Roster contains only the player (the speaker) — nobody to route to.
+    d = _decide(commands.DedupRegistry(3.0), FakeOllama(), _settings(),
+                MemoryStore(":memory:"), _req(group="Andreas:7:Paladin:60"))
+    assert d.role == "bystander"
+
+
+def test_empty_roster_degrades_to_acting_self():
+    d = _decide(commands.DedupRegistry(3.0), FakeOllama(), _settings(),
+                MemoryStore(":memory:"), _req(group=""))
+    assert d.role == "actor"
