@@ -120,11 +120,15 @@ if (-not (Test-Path $confPath)) {
     exit 1
 }
 
-$blockLines = Get-Content (Join-Path $HumanlikeDir "conf\m1-ollama-direct.conf.example")
+$blockLines = Get-Content (Join-Path $HumanlikeDir "conf\m1-ollama-direct.conf.example") -Encoding UTF8
 if ($Milestone -eq "M2") {
-    $m2Lines  = Get-Content (Join-Path $HumanlikeDir "conf\m2-sidecar.conf.example")
+    $m2Lines  = Get-Content (Join-Path $HumanlikeDir "conf\m2-sidecar.conf.example") -Encoding UTF8
     $endpoint = @($m2Lines | Where-Object { $_ -match '^AiPlayerbot\.LLMApiEndpoint\s*=' })[0]
     $apiJson  = @($m2Lines | Where-Object { $_ -match '^AiPlayerbot\.LLMApiJson\s*=' })[0]
+    if (-not $endpoint -or -not $apiJson) {
+        Write-Status "FAILED" "Could not find LLMApiEndpoint/LLMApiJson lines in m2-sidecar.conf.example - file format changed?"
+        exit 1
+    }
     $blockLines = $blockLines | ForEach-Object {
         if ($_ -match '^AiPlayerbot\.LLMApiEndpoint\s*=') { $endpoint }
         elseif ($_ -match '^AiPlayerbot\.LLMApiJson\s*=') { $apiJson }

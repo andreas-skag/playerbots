@@ -1,4 +1,4 @@
-# ── Milestone 2: LLM chat through the brain sidecar ────────────────────
+# -- Milestone 2: LLM chat through the brain sidecar --------------------
 # Same as m1-ollama-direct.conf.example EXCEPT these two keys.
 # Requires the sidecar running: see humanlike/README.md, "Milestone 2".
 

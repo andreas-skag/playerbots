@@ -1,4 +1,4 @@
-# ── Milestone 1: LLM chat direct to Ollama ─────────────────────────────
+# -- Milestone 1: LLM chat direct to Ollama ---------------------------
 # Paste this block into aiplayerbot.conf on the target machine
 # (replacing any existing AiPlayerbot.LLM* lines).
 
