@@ -1,4 +1,4 @@
-from brain.request_parser import parse_request
+from brain.request_parser import GroupMember, parse_request
 
 
 def full_body():
@@ -74,3 +74,35 @@ def test_null_meta_values_do_not_break_types():
     req = parse_request(body)
     assert req.bot_name == ""
     assert req.event == "chat"
+
+
+def _body_with_group(group):
+    return {
+        "messages": [{"role": "user", "content": "Andreas:can you tank?"}],
+        "meta": {"bot_guid": "42", "bot_name": "Grimtok", "other_guid": "7",
+                 "other_name": "Andreas", "channel": "in party chat",
+                 "event": "chat", "group": group},
+    }
+
+
+def test_group_roster_parsed():
+    req = parse_request(_body_with_group(
+        "Andreas:7:Paladin:60;Grimtok:42:Warrior:60;Zinnia:43:Priest:58"))
+    assert req.group == [
+        GroupMember(name="Andreas", guid=7, cls="Paladin", level=60),
+        GroupMember(name="Grimtok", guid=42, cls="Warrior", level=60),
+        GroupMember(name="Zinnia", guid=43, cls="Priest", level=58),
+    ]
+
+
+def test_group_missing_or_placeholder_is_empty():
+    assert parse_request(_body_with_group("")).group == []
+    assert parse_request(_body_with_group("<group>")).group == []
+    body = _body_with_group("x")
+    del body["meta"]["group"]
+    assert parse_request(body).group == []
+
+
+def test_group_malformed_entries_skipped():
+    req = parse_request(_body_with_group("Broken;Andreas:7:Paladin:60;A:B:C:D"))
+    assert req.group == [GroupMember(name="Andreas", guid=7, cls="Paladin", level=60)]
