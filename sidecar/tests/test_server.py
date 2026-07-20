@@ -6,13 +6,14 @@ from brain.settings import Settings
 
 
 class FakeOllama:
-    def __init__(self, reply="Aye. Deadmines it is, whelp."):
+    def __init__(self, reply="Aye. Deadmines it is, whelp.", intent_reply='{"verb": "none"}'):
         self.reply = reply
+        self.intent_reply = intent_reply
         self.calls = []
 
-    async def chat(self, messages, tier="inner"):
-        self.calls.append((messages, tier))
-        return self.reply
+    async def chat(self, messages, tier="inner", format=None):
+        self.calls.append((messages, tier, format))
+        return self.intent_reply if format == "json" else self.reply
 
 
 def body(channel="in party chat"):
@@ -121,3 +122,60 @@ def test_failed_generation_does_not_start_cooldown(tmp_path):
     assert r1.json()["choices"][0]["message"]["content"] == ""
     assert r2.json()["choices"][0]["message"]["content"] == "Back now, whelp."
     assert flaky.calls == 2
+
+
+GROUP = "Andreas:7:Paladin:60;Grimtok:42:Warrior:60;Zinnia:43:Priest:58"
+
+
+def command_body(msg="can you tank this dungeon?", bot_guid="42", channel="in party chat"):
+    b = body(channel=channel)
+    b["messages"][1]["content"] = f"Andreas:{msg}"
+    b["meta"]["bot_guid"] = bot_guid
+    b["meta"]["group"] = GROUP
+    return b
+
+
+def make_command_client(tmp_path, fake):
+    from brain.settings import CommandSettings
+    settings = Settings(db_path=":memory:", request_log=str(tmp_path / "req.jsonl"),
+                        templates_dir="templates", summarize_after=1000,
+                        per_bot_cooldown=0.0, player_guids=["7"],
+                        commands=CommandSettings())
+    store = MemoryStore(":memory:")
+    app = create_app(settings=settings, store=store, ollama=fake)
+    return TestClient(app), store
+
+
+def test_actor_gets_directive_and_ack_context(tmp_path):
+    fake = FakeOllama(reply="Fine, I'll keep it busy.",
+                      intent_reply='{"verb": "role_tank", "args": {}, "addressed": ""}')
+    client, _ = make_command_client(tmp_path, fake)
+    r = client.post("/v1/chat/completions", json=command_body()).json()
+    assert r["directive"] == {"verb": "role_tank"}
+    assert r["choices"][0]["message"]["content"] == "Fine, I'll keep it busy."
+    chat_system = [c for c in fake.calls if c[2] is None][0][0][0]["content"]
+    assert "switch to tanking" in chat_system
+
+
+def test_bystander_and_banter_have_no_directive(tmp_path):
+    fake = FakeOllama(intent_reply='{"verb": "role_tank", "args": {}, "addressed": ""}')
+    client, _ = make_command_client(tmp_path, fake)
+    r = client.post("/v1/chat/completions", json=command_body(bot_guid="43")).json()
+    assert "directive" not in r
+    fake2 = FakeOllama()
+    client2, _ = make_command_client(tmp_path, fake2)
+    r2 = client2.post("/v1/chat/completions",
+                      json=command_body(msg="lovely day in the barrens")).json()
+    assert "directive" not in r2
+    assert all(c[2] is None for c in fake2.calls)  # pre-filter skipped classifier
+
+
+def test_refusal_has_no_directive_but_refusal_context(tmp_path):
+    fake = FakeOllama(reply="Tank it yourself.",
+                      intent_reply='{"verb": "role_tank", "args": {}, "addressed": ""}')
+    client, store = make_command_client(tmp_path, fake)
+    store.adjust_sentiment(42, 7, -50)
+    r = client.post("/v1/chat/completions", json=command_body()).json()
+    assert "directive" not in r
+    chat_system = [c for c in fake.calls if c[2] is None][0][0][0]["content"]
+    assert "refusing" in chat_system

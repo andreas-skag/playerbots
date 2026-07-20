@@ -55,6 +55,7 @@ def main(argv: list[str] | None = None, app=None) -> dict:
 
     response = TestClient(app).post("/v1/chat/completions", json=body).json()
     print(json.dumps(response, indent=2, ensure_ascii=False))
+    print("directive:", json.dumps(response.get("directive")) if response.get("directive") else "(none)")
     return response
 
 

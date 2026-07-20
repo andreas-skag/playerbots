@@ -6,6 +6,8 @@ import time
 from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from . import commands as commands_mod
+from . import intent as intent_mod
 from . import personas, prompts, summarizer
 from .memory import MemoryStore
 from .ollama import OllamaClient
@@ -28,6 +30,7 @@ def create_app(settings: Settings | None = None, store: MemoryStore | None = Non
     app = FastAPI()
 
     last_generation: dict[int, float] = {}
+    registry = commands_mod.DedupRegistry(settings.commands.dedup_window_s)
 
     @app.post("/v1/chat/completions")
     async def complete(request: Request, background_tasks: BackgroundTasks):
@@ -51,8 +54,24 @@ def create_app(settings: Settings | None = None, store: MemoryStore | None = Non
             else:
                 recent, summary, score = [], "", 0.0
 
+            decision = commands_mod.Decision("none", None)
+            if (settings.commands.enabled and req.event == "chat"
+                    and intent_mod.looks_like_command(req.message)):
+                decision = await commands_mod.decide(registry, ollama, settings,
+                                                     store, req)
+
+            directive_note = ""
+            if decision.role == "actor":
+                directive_note = (f"You just agreed to {commands_mod.describe(decision.intent)}. "
+                                  "Acknowledge briefly, in character.")
+            elif decision.role == "refused":
+                directive_note = (f"{req.other_name} asked you to "
+                                  f"{commands_mod.describe(decision.intent)}, but you are "
+                                  "refusing because of how you feel about them. Say so in character.")
+
             messages = prompts.assemble(settings.templates_dir, persona, summary,
-                                        score, recent, req)
+                                        score, recent, req,
+                                        directive_note=directive_note)
             reply = await ollama.chat(messages, tier="inner" if inner else "ambient")
             last_generation[req.bot_guid] = now
 
@@ -65,7 +84,10 @@ def create_app(settings: Settings | None = None, store: MemoryStore | None = Non
                     req.other_guid, req.bot_name, req.other_name,
                     settings.summarize_after)
 
-            return _completion(reply)
+            payload = {"choices": [{"message": {"role": "assistant", "content": reply}}]}
+            if decision.role == "actor":
+                payload["directive"] = commands_mod.directive_json(decision.intent)
+            return JSONResponse(payload)
         except Exception:
             log.exception("request failed; returning empty reply")
             return _completion("")
