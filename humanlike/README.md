@@ -6,6 +6,23 @@ All steps below run on the **target Windows machine** (RTX 3090).
 
 ## Milestone 1 — LLM chat direct to Ollama (no code changes)
 
+### Automated setup (recommended)
+
+From the repo checkout, in PowerShell:
+
+```powershell
+cd humanlike\scripts
+powershell -ExecutionPolicy Bypass -File setup.ps1            # install + configure (M1)
+powershell -ExecutionPolicy Bypass -File pick-bots.ps1        # choose companion bots from your DB
+# edit humanlike\llm_character_card.txt (personality per bot), then:
+powershell -ExecutionPolicy Bypass -File setup.ps1            # re-run to deploy the cards
+powershell -ExecutionPolicy Bypass -File start.ps1            # start Ollama (add -Server to also start the game server)
+```
+
+`setup.ps1` is idempotent — re-running it skips finished steps. It backs up
+`aiplayerbot.conf` (timestamped `.bak-*`) before patching. The manual steps
+below do the same things by hand and serve as reference/fallback.
+
 ### 1. Install Ollama and pull models
 
 Install from https://ollama.com/download/windows, then:
@@ -51,6 +68,19 @@ must return JSON with a `"content"` field. (PowerShell's built-in `curl`
 alias won't work — use `curl.exe`.)
 
 ## Milestone 2 — brain sidecar (personas + relationship memory)
+
+### Automated setup (recommended)
+
+After rebuilding the server from this branch (step 1 below — the rebuild
+itself is not automated):
+
+```powershell
+cd humanlike\scripts
+powershell -ExecutionPolicy Bypass -File setup.ps1 -Milestone M2   # models, venv, config, conf patch
+powershell -ExecutionPolicy Bypass -File start.ps1                 # Ollama + sidecar (add -Server for the game server)
+```
+
+The manual steps below are the reference/fallback.
 
 Requires: M1 working, this branch's server rebuilt (adds `<bot guid>` /
 `<other guid>` placeholders), and models from M1 plus:
@@ -123,3 +153,8 @@ will often contradict each other. Pick one:
 7. Prompt iteration: edit `sidecar/templates/chat.txt`, then
    `.venv\Scripts\python -m brain.replay requests.jsonl` — the last real
    request replays against the new template without touching the game.
+8. Script check: run `setup.ps1 -Milestone M2` a second time — every step
+   should print `[skipped]` or `[done]` with no duplicate LLM block in
+   `aiplayerbot.conf` (search for exactly one `BEGIN humanlike-llm block`).
+9. Script check: run `start.ps1` while everything is already running — all
+   services should report `[ok] ... already running`.
