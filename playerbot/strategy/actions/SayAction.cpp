@@ -8,6 +8,7 @@
 #include <regex>
 #include <boost/algorithm/string.hpp>
 #include "playerbot/PlayerbotLLMInterface.h"
+#include "playerbot/LLMDirectiveHandler.h"
 
 using namespace ai;
 
@@ -420,7 +421,7 @@ delayedPackets ChatReplyAction::LinesToPackets(const std::vector<std::string>& l
 }
 
 delayedPackets ChatReplyAction::GenerateResponsePackets(const std::string json
-    , const WorldPacket chatTemplate, const WorldPacket emoteTemplate, const WorldPacket systemTemplate, const std::string startPattern, const std::string endPattern, const std::string deletePattern, const std::string splitPattern, bool debug)
+    , const WorldPacket chatTemplate, const WorldPacket emoteTemplate, const WorldPacket systemTemplate, const std::string startPattern, const std::string endPattern, const std::string deletePattern, const std::string splitPattern, bool debug, uint32 botGuid, uint32 requesterGuid)
 {
     std::vector<std::string> debugLines;
 
@@ -430,6 +431,17 @@ delayedPackets ChatReplyAction::GenerateResponsePackets(const std::string json
     auto startTime = time(nullptr);
 
     std::string response = PlayerbotLLMInterface::Generate(json, sPlayerbotAIConfig.llmGenerationTimeout, sPlayerbotAIConfig.llmMaxSimultaniousGenerations, debugLines);
+
+    if (sPlayerbotAIConfig.llmCommandsEnabled && botGuid)
+    {
+        PendingDirective directive;
+        if (LLMDirectiveHandler::ExtractDirective(response, directive))
+        {
+            directive.requesterGuid = requesterGuid;
+            directive.enqueuedAt = time(nullptr);
+            LLMDirectiveHandler::Enqueue(botGuid, directive);
+        }
+    }
 
     auto timeAfter = time(nullptr);
     auto timeDiff = (timeAfter - startTime) * IN_MILLISECONDS;
@@ -539,6 +551,24 @@ void ChatReplyAction::ChatReplyDo(Player* bot, uint32 type, uint32 guid1, uint32
                 GetAIChatPlaceholders(placeholders, bot, player);
                 GetAIChatPlaceholders(placeholders, bot, "bot");
                 GetAIChatPlaceholders(placeholders, player, "other");
+
+                std::string groupRoster;
+                if (Group* botGroup = bot->GetGroup())
+                {
+                    for (GroupReference* ref = botGroup->GetFirstMember(); ref; ref = ref->next())
+                    {
+                        Player* member = ref->getSource();
+                        if (!member)
+                            continue;
+                        if (!groupRoster.empty())
+                            groupRoster += ";";
+                        groupRoster += member->GetName();
+                        groupRoster += ":" + std::to_string(member->GetObjectGuid().GetCounter());
+                        groupRoster += ":" + ChatHelper::formatClass(member->getClass());
+                        groupRoster += ":" + std::to_string(member->GetLevel());
+                    }
+                }
+                placeholders["<group>"] = groupRoster;
 
                 std::map<ChatChannelSource, std::string> sourceName;
                 sourceName[ChatChannelSource::SRC_GUILD] = "in guild chat";
@@ -651,7 +681,7 @@ void ChatReplyAction::ChatReplyDo(Player* bot, uint32 type, uint32 guid1, uint32
                 WorldPacket emoteTemplate = (type == CHAT_MSG_SAY || type == CHAT_MSG_WHISPER) ? GetPacketTemplate(CMSG_MESSAGECHAT, CHAT_MSG_EMOTE, bot, player) : WorldPacket();
                 WorldPacket systemTemplate = GetPacketTemplate(CMSG_MESSAGECHAT, CHAT_MSG_WHISPER, bot, player);
 
-                futurePackets futPackets = std::async(std::launch::async, ChatReplyAction::GenerateResponsePackets, json, chatTemplate, emoteTemplate, systemTemplate, startPattern, endPattern, deletePattern, splitPattern, debug);
+                futurePackets futPackets = std::async(std::launch::async, ChatReplyAction::GenerateResponsePackets, json, chatTemplate, emoteTemplate, systemTemplate, startPattern, endPattern, deletePattern, splitPattern, debug, bot->GetObjectGuid().GetCounter(), player->GetObjectGuid().GetCounter());
 
                 ai->SendDelayedPacket(session, std::move(futPackets));
             }
