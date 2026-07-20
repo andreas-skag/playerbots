@@ -45,3 +45,14 @@ def test_assemble_handles_empty_memory(tmp_path):
     msgs = assemble(tmp_path, "p", "", 0, [], req())
     assert "no shared history yet" in msgs[0]["content"]
     assert "(none)" in msgs[0]["content"]
+
+
+def test_directive_note_in_system_prompt():
+    messages = assemble("templates", "persona", "", 0.0, [], req(),
+                        directive_note="You just agreed to switch to tanking.")
+    assert "You just agreed to switch to tanking." in messages[0]["content"]
+
+
+def test_no_directive_note_leaves_no_marker():
+    messages = assemble("templates", "persona", "", 0.0, [], req())
+    assert "{directive_note}" not in messages[0]["content"]

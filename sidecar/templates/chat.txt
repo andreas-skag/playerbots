@@ -8,5 +8,7 @@ What you remember about them: {summary}
 Recent conversation:
 {history}
 
+{directive_note}
+
 Reply as {bot_name} in one or two short sentences, in character, consistent
 with your persona, relationship and memories. Never mention being an AI.

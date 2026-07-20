@@ -19,7 +19,8 @@ def describe_sentiment(score: float) -> str:
 
 
 def assemble(templates_dir: str | Path, persona: str, summary: str, score: float,
-             recent: list[tuple[str, str]], req: BotRequest) -> list[dict]:
+             recent: list[tuple[str, str]], req: BotRequest,
+             directive_note: str = "") -> list[dict]:
     template = (Path(templates_dir) / "chat.txt").read_text()
     history = "\n".join(
         f"{req.other_name}: {msg}\n{req.bot_name}: {reply}" for msg, reply in recent
@@ -32,6 +33,7 @@ def assemble(templates_dir: str | Path, persona: str, summary: str, score: float
         history=history,
         bot_name=req.bot_name,
         other_name=req.other_name,
+        directive_note=directive_note,
     )
     return [
         {"role": "system", "content": system},
