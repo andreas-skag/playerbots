@@ -18,11 +18,18 @@ function Get-Settings {
         dbName       = "classiccharacters"
     }
     if (Test-Path $script:SettingsPath) {
-        $loaded = Get-Content $script:SettingsPath -Raw | ConvertFrom-Json
-        foreach ($key in @($defaults.Keys)) {
-            $prop = $loaded.PSObject.Properties[$key]
-            if ($prop -and $null -ne $prop.Value -and "$($prop.Value)" -ne "") {
-                $defaults[$key] = $prop.Value
+        $loaded = $null
+        try {
+            $loaded = Get-Content $script:SettingsPath -Raw | ConvertFrom-Json
+        } catch {
+            Write-Status "warn" "settings.json is not valid JSON - using defaults (fix or delete $script:SettingsPath)"
+        }
+        if ($null -ne $loaded) {
+            foreach ($key in @($defaults.Keys)) {
+                $prop = $loaded.PSObject.Properties[$key]
+                if ($prop -and $null -ne $prop.Value -and "$($prop.Value)" -ne "") {
+                    $defaults[$key] = $prop.Value
+                }
             }
         }
     }
