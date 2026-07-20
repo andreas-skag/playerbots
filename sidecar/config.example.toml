@@ -10,3 +10,14 @@ max_concurrent = 4        # global cap on simultaneous Ollama generations
 per_bot_cooldown = 2.0    # min seconds between generations for one bot
 summarize_after = 30
 request_log = "requests.jsonl"
+
+# Your own character GUIDs (characters.guid) — whisper commands outside a group
+# are only obeyed from these. pick-bots.ps1 fills this in.
+player_guids = []
+
+[commands]
+enabled = true               # master switch for conversational commands
+always_obey = false          # true = skip sentiment-based refusals
+sentiment_threshold = -25.0  # refuse commands from speakers below this score
+dedup_window_s = 3.0         # window for one-actor-per-utterance dedup
+allow_bot_commanders = true  # bots may command each other within the group

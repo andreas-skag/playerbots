@@ -30,3 +30,33 @@ def test_unknown_key_raises_readable_error(tmp_path):
     cfg.write_text('chat_moddel = "typo"\n')
     with pytest.raises(ValueError, match="chat_moddel"):
         Settings.load(cfg)
+
+
+def test_commands_defaults():
+    s = Settings()
+    assert s.commands.enabled is True
+    assert s.commands.always_obey is False
+    assert s.commands.sentiment_threshold == -25.0
+    assert s.commands.dedup_window_s == 3.0
+    assert s.commands.allow_bot_commanders is True
+    assert s.player_guids == []
+
+
+def test_commands_table_loaded(tmp_path):
+    p = tmp_path / "config.toml"
+    p.write_text('player_guids = ["7"]\n[commands]\nenabled = false\nsentiment_threshold = -10.0\n')
+    s = Settings.load(p)
+    assert s.commands.enabled is False
+    assert s.commands.sentiment_threshold == -10.0
+    assert s.commands.always_obey is False
+    assert s.player_guids == ["7"]
+
+
+def test_unknown_commands_key_rejected(tmp_path):
+    p = tmp_path / "config.toml"
+    p.write_text("[commands]\nbogus = 1\n")
+    try:
+        Settings.load(p)
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "bogus" in str(e)

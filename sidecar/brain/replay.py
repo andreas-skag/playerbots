@@ -33,6 +33,8 @@ def replay_settings(base: Settings) -> Settings:
         per_bot_cooldown=0.0,
         summarize_after=base.summarize_after,
         request_log=str(scratch / "requests.jsonl"),
+        player_guids=list(base.player_guids),
+        commands=base.commands,
     )
 
 
