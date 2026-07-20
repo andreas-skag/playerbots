@@ -1,0 +1,115 @@
+import asyncio
+import json
+
+from brain import commands
+from brain.intent import Intent
+from brain.memory import MemoryStore
+from brain.request_parser import parse_request
+from brain.settings import CommandSettings, Settings
+
+ROSTER = "Andreas:7:Paladin:60;Grimtok:42:Warrior:60;Zinnia:43:Priest:58"
+
+
+def _req(msg="can someone tank?", bot_guid="42", other_guid="7",
+         channel="in party chat", group=ROSTER):
+    return parse_request({
+        "messages": [{"role": "user", "content": f"X:{msg}"}],
+        "meta": {"bot_guid": bot_guid, "bot_name": "Grimtok",
+                 "other_guid": other_guid, "other_name": "Andreas",
+                 "channel": channel, "event": "chat", "group": group},
+    })
+
+
+class FakeOllama:
+    def __init__(self, reply='{"verb": "role_tank", "args": {}, "addressed": ""}'):
+        self.reply = reply
+        self.calls = 0
+
+    async def chat(self, messages, tier="inner", format=None):
+        self.calls += 1
+        return self.reply
+
+
+def _settings(**cmd):
+    return Settings(player_guids=["7"], commands=CommandSettings(**cmd))
+
+
+def _decide(registry, ollama, settings, store, req):
+    return asyncio.run(commands.decide(registry, ollama, settings, store, req))
+
+
+def test_unauthorized_stranger_no_classifier_call():
+    fake = FakeOllama()
+    req = _req(other_guid="999", channel="in private message")
+    d = _decide(commands.DedupRegistry(3.0), fake, _settings(), MemoryStore(":memory:"), req)
+    assert d.role == "none" and fake.calls == 0
+
+
+def test_player_whisper_makes_this_bot_actor():
+    req = _req(channel="in private message", group="")
+    d = _decide(commands.DedupRegistry(3.0), FakeOllama(), _settings(), MemoryStore(":memory:"), req)
+    assert d.role == "actor"
+    assert d.intent == Intent(verb="role_tank")
+
+
+def test_best_fit_routes_tank_to_warrior():
+    registry = commands.DedupRegistry(3.0)
+    fake = FakeOllama()
+    store = MemoryStore(":memory:")
+    warrior = _decide(registry, fake, _settings(), store, _req(bot_guid="42"))
+    priest = _decide(registry, fake, _settings(), store, _req(bot_guid="43"))
+    assert warrior.role == "actor"
+    assert priest.role == "bystander"
+    assert fake.calls == 1  # classified once, cached for the second bot
+
+
+def test_addressed_bot_wins_over_class_fit():
+    fake = FakeOllama('{"verb": "role_tank", "args": {}, "addressed": "Zinnia"}')
+    d = _decide(commands.DedupRegistry(3.0), fake, _settings(), MemoryStore(":memory:"),
+                _req(bot_guid="43"))
+    assert d.role == "actor"
+
+
+def test_low_sentiment_refuses_and_always_obey_overrides():
+    store = MemoryStore(":memory:")
+    store.adjust_sentiment(42, 7, -50)
+    d = _decide(commands.DedupRegistry(3.0), FakeOllama(), _settings(), store, _req())
+    assert d.role == "refused"
+    d2 = _decide(commands.DedupRegistry(3.0), FakeOllama(), _settings(always_obey=True),
+                 store, _req())
+    assert d2.role == "actor"
+
+
+def test_bot_commander_allowed_in_group_only():
+    # Zinnia (43, in roster, not the player) commands in party chat
+    req = _req(other_guid="43")
+    d = _decide(commands.DedupRegistry(3.0), FakeOllama(), _settings(), MemoryStore(":memory:"), req)
+    assert d.role == "actor"
+    # but not when allow_bot_commanders is off
+    d2 = _decide(commands.DedupRegistry(3.0), FakeOllama(),
+                 _settings(allow_bot_commanders=False), MemoryStore(":memory:"), req)
+    assert d2.role == "none"
+    # and never via whisper
+    d3 = _decide(commands.DedupRegistry(3.0), FakeOllama(), _settings(),
+                 MemoryStore(":memory:"), _req(other_guid="43", channel="in private message"))
+    assert d3.role == "none"
+
+
+def test_cascade_guard_blocks_recent_actor():
+    registry = commands.DedupRegistry(3.0)
+    store = MemoryStore(":memory:")
+    first = _decide(registry, FakeOllama(), _settings(), store, _req(bot_guid="42"))
+    assert first.role == "actor"
+    # now Grimtok (42) speaks a command-shaped line — he just acted, so ignore
+    fake = FakeOllama()
+    d = _decide(registry, fake, _settings(), store, _req(bot_guid="43", other_guid="42"))
+    assert d.role == "none" and fake.calls == 0
+
+
+def test_directive_json_and_describe():
+    assert commands.directive_json(Intent(verb="role_tank")) == {"verb": "role_tank"}
+    assert commands.directive_json(Intent(verb="attack", args={"mark": "skull"})) == {
+        "verb": "attack", "args": {"mark": "skull"}}
+    assert commands.describe(Intent(verb="attack", args={"mark": "skull"})) == \
+        "attack the skull target"
+    assert commands.describe(Intent(verb="role_tank")) == "switch to tanking"
