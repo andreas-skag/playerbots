@@ -145,6 +145,7 @@ void ChatReplyAction::GetAIChatPlaceholders(std::map<std::string, std::string>& 
 void ChatReplyAction::GetAIChatPlaceholders(std::map<std::string, std::string>& placeholders, Unit* unit, const std::string preFix, Player* observer)
 {
     placeholders["<" + preFix + " name>"] = unit->GetName();
+    placeholders["<" + preFix + " guid>"] = std::to_string(unit->GetObjectGuid().GetCounter());
     placeholders["<" + preFix + " gender>"] = unit->getGender() == GENDER_MALE ? "male" : "female";
     placeholders["<" + preFix + " level>"] = std::to_string(unit->GetLevel());
     placeholders["<" + preFix + " class>"] = ChatHelper::formatClass(unit->getClass());
