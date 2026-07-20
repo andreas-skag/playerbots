@@ -159,3 +159,50 @@ will often contradict each other. Pick one:
 9. Script check: run `start.ps1` while everything is already running - Ollama
    reports `[ok] Ollama is up` and the other services report
    `[ok] ... already running`.
+
+## M3 — Conversational commands
+
+Bots act on party requests: "can you tank?", "lead the way", "kill the skull
+target". Requires the M2 sidecar setup plus:
+
+### 1. Switch your configuration
+
+In `aiplayerbot.conf`, replace the `AiPlayerbot.LLM*` section with the contents
+of `humanlike/conf/m3-commands.conf.example`. This adds `"group"` to the request
+meta and enables `LLMCommands`.
+
+### 2. Re-run scripts/pick-bots.ps1
+
+Re-run `scripts/pick-bots.ps1` — it now also asks which characters are *yours*,
+writes `player_guids` into `sidecar\config.toml`, and prints the
+`AiPlayerbot.LLMCommands.TrustedGuids` line to paste into the conf.
+
+### 3. Rebuild the server
+
+Rebuild `mangosd` from this branch on the target machine (new files:
+`playerbot/LLMDirectiveHandler.h` and `playerbot/LLMDirectiveHandler.cpp`;
+re-run CMake configure so the glob picks them up), then restart everything via
+`scripts/start.ps1`.
+
+### 4. Verify (M3 checklist)
+
+In a party with your bots (warrior + healer recommended), in party chat:
+
+1. "can you tank this dungeon?" → the warrior answers in character AND
+   switches to tank strategies (check with `co ?` whisper: `tank` listed)
+2. "someone heal me" → exactly ONE bot (the healer) responds with action;
+   others at most banter, no double role-switch
+3. Mark a mob skull, "Grimtok kill the skull" → bot attacks the marked mob
+4. "lead the way" in a dungeon → bot takes group lead and walks; "follow me"
+   → bot returns lead and resumes following
+5. Whisper a companion (not in your group) "come here" → bot obeys
+   (TrustedGuids works out-of-group)
+6. From a character NOT in `player_guids` and not grouped, whisper a command
+   → chat reply, but NO action
+7. Drop a bot's sentiment below the threshold (repeated insults, or set
+   `sentiment_threshold = 999` temporarily) → command is refused in character,
+   no action; set `always_obey = true` in `[commands]` → bot complies again
+8. Kill the sidecar mid-session → bots keep fighting normally, no chat, no
+   actions, no server errors
+9. `python -m brain.replay requests.jsonl` on a recorded command shows a
+   `directive:` line
