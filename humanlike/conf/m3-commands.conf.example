@@ -1,0 +1,16 @@
+# -- Milestone 3: Conversational commands (LLMCommands) via sidecar --------
+# Supersedes m2-sidecar.conf.example when running M3.
+# Requires the sidecar running: see humanlike/README.md, "Milestone 3".
+
+AiPlayerbot.LLMApiEndpoint = http://127.0.0.1:8085/v1/chat/completions
+
+# The extra "meta" object is read by the sidecar (guids key the memory DB)
+# and ignored by ordinary OpenAI-compatible endpoints.
+AiPlayerbot.LLMApiJson = {"model":"brain","messages":[{"role":"system","content":"<pre prompt> <context>"},{"role":"user","content":"<prompt>"}],"max_tokens":120,"meta":{"bot_guid":"<bot guid>","other_guid":"<other guid>","bot_name":"<bot name>","other_name":"<other name>","channel":"<channel name>","event":"chat","group":"<group>"}}
+
+# --- M3: conversational commands -------------------------------------------
+# Bots act on party requests ("can you tank?") via sidecar directives.
+AiPlayerbot.LLMCommands.Enable = 1
+# Your own character GUIDs (characters.guid). Whispered commands outside a
+# group are only obeyed from these. pick-bots.ps1 prints this line for you.
+AiPlayerbot.LLMCommands.TrustedGuids =

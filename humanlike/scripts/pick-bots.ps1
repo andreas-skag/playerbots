@@ -53,10 +53,10 @@ $settings.dbUser = $dbUser
 $settings.dbName = $dbName
 Save-Settings $settings
 
-# --- 3. Query character names ------------------------------------------------
+# --- 3. Query character names and GUIDs ----------------------------------------
 $env:MYSQL_PWD = $plainPwd
 try {
-    $names = & $mysqlPath -h $dbHost -u $dbUser -N -B -e "SELECT name FROM characters ORDER BY name" $dbName
+    $rows = & $mysqlPath -h $dbHost -u $dbUser -N -B -e "SELECT guid, name FROM characters ORDER BY name" $dbName
 } finally {
     Remove-Item Env:MYSQL_PWD -ErrorAction SilentlyContinue
     $plainPwd = $null
@@ -65,7 +65,11 @@ if ($LASTEXITCODE -ne 0) {
     Write-Status "FAILED" "mysql query failed - check host/user/password/database name"
     exit 1
 }
-$names = @($names | Where-Object { $_ })
+$guids = @(); $names = @()
+foreach ($row in @($rows | Where-Object { $_ })) {
+    $cols = $row -split "`t"
+    if ($cols.Count -ge 2) { $guids += $cols[0]; $names += $cols[1] }
+}
 if ($names.Count -eq 0) {
     Write-Status "FAILED" "No characters found in $dbName.characters"
     exit 1
@@ -110,6 +114,35 @@ $lines = $lines | ForEach-Object {
 if (-not $replaced) { $lines = @($lines) + $innerLine }
 Set-Content -Path $configToml -Value $lines -Encoding ASCII
 Write-Status "done" "inner_circle updated in sidecar\config.toml"
+
+# --- 5b. player_guids in sidecar\config.toml ---------------------------------
+$playerSel = Read-Host "Which characters are YOURS (the human's)? (numbers/ranges, e.g. 2)"
+$playerIdx = @()
+foreach ($part in $playerSel.Split(',')) {
+    $part = $part.Trim()
+    if ($part -match '^(\d+)-(\d+)$') { $playerIdx += ([int]$Matches[1])..([int]$Matches[2]) }
+    elseif ($part -match '^\d+$') { $playerIdx += [int]$part }
+}
+$playerGuids = @($playerIdx | Sort-Object -Unique |
+    Where-Object { $_ -ge 1 -and $_ -le $names.Count } |
+    ForEach-Object { $guids[$_ - 1] })
+if ($playerGuids.Count -gt 0) {
+    $guidList = ($playerGuids | ForEach-Object { '"' + $_ + '"' }) -join ", "
+    $playerLine = "player_guids = [$guidList]"
+    $lines = Get-Content $configToml
+    $replaced = $false
+    $lines = $lines | ForEach-Object {
+        if ($_ -match '^\s*player_guids\s*=') { $replaced = $true; $playerLine } else { $_ }
+    }
+    if (-not $replaced) { $lines = @($lines) + $playerLine }
+    Set-Content -Path $configToml -Value $lines -Encoding ASCII
+    Write-Status "done" "player_guids updated in sidecar\config.toml"
+    Write-Host ""
+    Write-Host "Add this line to your aiplayerbot.conf (see m3-commands.conf.example):"
+    Write-Host ("  AiPlayerbot.LLMCommands.TrustedGuids = " + ($playerGuids -join ","))
+} else {
+    Write-Status "skipped" "No player characters selected - whisper commands stay group-only"
+}
 
 # --- 6. Card stubs -----------------------------------------------------------
 $cardFile = Join-Path $HumanlikeDir "llm_character_card.txt"
