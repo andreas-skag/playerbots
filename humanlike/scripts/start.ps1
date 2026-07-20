@@ -81,6 +81,11 @@ if ($Server) {
         exit 1
     }
     foreach ($exe in @("realmd.exe", "mangosd.exe")) {
+        $procName = [System.IO.Path]::GetFileNameWithoutExtension($exe)
+        if (Get-Process -Name $procName -ErrorAction SilentlyContinue) {
+            Write-Status "ok" "$exe already running - skipped"
+            continue
+        }
         $exePath = Join-Path $settings.serverDir $exe
         if (Test-Path $exePath) {
             Start-Process $exePath -WorkingDirectory $settings.serverDir
