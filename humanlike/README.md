@@ -167,9 +167,11 @@ target". Requires the M2 sidecar setup plus:
 
 ### 1. Switch your configuration
 
-In `aiplayerbot.conf`, replace the `AiPlayerbot.LLM*` section with the contents
-of `humanlike/conf/m3-commands.conf.example`. This adds `"group"` to the request
-meta and enables `LLMCommands`.
+In `aiplayerbot.conf`, add or replace the four keys shown in
+`humanlike/conf/m3-commands.conf.example` (LLMApiEndpoint, LLMApiJson,
+LLMCommands.Enable, LLMCommands.TrustedGuids), keeping the rest of your
+existing M1/M2 LLM block intact. This adds `"group"` to the request meta and
+enables `LLMCommands`.
 
 ### 2. Re-run scripts/pick-bots.ps1
 
@@ -204,5 +206,5 @@ In a party with your bots (warrior + healer recommended), in party chat:
    no action; set `always_obey = true` in `[commands]` → bot complies again
 8. Kill the sidecar mid-session → bots keep fighting normally, no chat, no
    actions, no server errors
-9. `python -m brain.replay requests.jsonl` on a recorded command shows a
-   `directive:` line
+9. `.venv\Scripts\python -m brain.replay requests.jsonl` on a recorded command
+   shows a `directive:` line
