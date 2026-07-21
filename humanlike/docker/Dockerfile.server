@@ -25,8 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN git clone https://github.com/cmangos/mangos-classic.git /src/core \
     && git -C /src/core checkout "${CMANGOS_REF:-de8f72993b9e1faa1bf92dd5505f3daec5cea3ce}"
 
-# This fork IS the module; the core requires it in-tree BEFORE cmake
-# (out-of-tree add_subdirectory lacks a binary dir)
+# This fork IS the module. The core's CMake FetchContent-declares PlayerBots
+# and would DELETE this copy and clone upstream master at configure time;
+# FETCHCONTENT_SOURCE_DIR_PLAYERBOTS (below) pins it to this pre-copied tree.
 COPY . /src/core/src/modules/PlayerBots
 
 ENV CCACHE_DIR=/ccache
@@ -35,6 +36,7 @@ RUN --mount=type=cache,target=/ccache \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/opt/mangos \
       -DBUILD_PLAYERBOTS=ON \
+      -DFETCHCONTENT_SOURCE_DIR_PLAYERBOTS=/src/core/src/modules/PlayerBots \
       -DCMAKE_C_COMPILER_LAUNCHER=ccache \
       -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     && cmake --build /build -j"$(nproc)" --target install
