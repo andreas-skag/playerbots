@@ -1,0 +1,12 @@
+# Sidecar config for docker. Mounted at /app/config.toml.
+ollama_url = "http://host.docker.internal:11434"
+chat_model = "mistral-small3.2"
+utility_model = "qwen3:4b"
+db_path = "/app/data/brain.db"
+request_log = "/app/data/requests.jsonl"
+templates_dir = "templates"
+inner_circle = []
+player_guids = []
+
+[commands]
+enabled = true
