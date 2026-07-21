@@ -51,7 +51,7 @@ services:
     volumes:
       - ./conf:/opt/mangos/etc:ro
     ports:
-      - "3724:3724"
+      - "127.0.0.1:3724:3724"
     depends_on:
       db:
         condition: service_healthy
@@ -69,7 +69,7 @@ services:
       - ./conf:/opt/mangos/etc:ro
       - ${CLIENT_DATA_DIR}:/data:ro
     ports:
-      - "8085:8085"
+      - "127.0.0.1:8085:8085"
     depends_on:
       db:
         condition: service_healthy

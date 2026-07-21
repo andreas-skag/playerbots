@@ -16,7 +16,7 @@ on this machine for GPU access. Replaces the deprecated native-Windows flow
    Fill in character cards in `conf/llm_character_card.txt` and, once you have
    picked companions, the `AiPlayerbot.LLMCommands.TrustedGuids` line in
    `conf/aiplayerbot.conf` (pick-bots.ps1 prints it — run it against
-   `localhost:3306` once the db container is up).
+   `127.0.0.1:3306` once the db container is up).
 5. First build + start (30-60 min for the core compile):
    `docker compose build sqlsource && docker compose up -d --build`
 6. Watch db-init: `docker compose logs -f db-init` — it installs the full
@@ -24,7 +24,8 @@ on this machine for GPU access. Replaces the deprecated native-Windows flow
 7. Windows client: `set realmlist 127.0.0.1` — then log in and create your
    account via the mangosd console:
    `docker compose attach mangosd` then `account create <user> <pass>`
-   (detach with Ctrl-P Ctrl-Q — plain Ctrl-C stops the server).
+   (detach with Ctrl-P Ctrl-Q — plain Ctrl-C restarts the server — use
+   `docker compose stop mangosd` to actually stop it).
 
 ## Daily use
 
@@ -49,6 +50,9 @@ on this machine for GPU access. Replaces the deprecated native-Windows flow
 - **Ollama URL mismatch** → the effective Ollama URL for the sidecar lives in
   `conf/config.toml` (key `ollama_url`). The `.env` file's `OLLAMA_URL` is
   informational; keep them in sync.
+- **`pull access denied for humanlike-docker-server-sqlsource`** → run
+  `docker compose build sqlsource` first (also needed again after bumping
+  `CMANGOS_REF`, so db-init's `/core-tree` matches).
 
 ## Desktop verification checklist (first run — includes pending M3 items)
 
@@ -56,6 +60,9 @@ on this machine for GPU access. Replaces the deprecated native-Windows flow
       M3 C++ — fix errors here)
 - [ ] `docker compose up -d` reaches healthy; `db-init` log ends with "done"
       and mentions playerbots tables
+- [ ] `docker compose logs mangosd` shows playerbot/LLM config being honored
+      (e.g. AiPlayerbot lines) — guards against the server image not
+      containing the fork
 - [ ] Client logs in via `127.0.0.1`; world loads (client data mount works)
 - [ ] Bots spawn and chat (sidecar round-trip through host Ollama)
 - [ ] The full M3 in-game checklist in `../README.md` §M3 passes (tank
