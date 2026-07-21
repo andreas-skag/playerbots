@@ -171,7 +171,10 @@ In `aiplayerbot.conf`, add or replace the four keys shown in
 `humanlike/conf/m3-commands.conf.example` (LLMApiEndpoint, LLMApiJson,
 LLMCommands.Enable, LLMCommands.TrustedGuids), keeping the rest of your
 existing M1/M2 LLM block intact. This adds `"group"` to the request meta and
-enables `LLMCommands`.
+enables `LLMCommands`. Note that out-of-group whisper commands from
+TrustedGuids additionally require the bot to be on your own account — the
+server's PlayerbotSecurity layer enforces this independently of
+LLMDirectiveHandler's own gate; group commands are unaffected.
 
 ### 2. Re-run scripts/pick-bots.ps1
 
@@ -198,7 +201,10 @@ In a party with your bots (warrior + healer recommended), in party chat:
 4. "lead the way" in a dungeon → bot takes group lead and walks; "follow me"
    → bot returns lead and resumes following
 5. Whisper a companion (not in your group) "come here" → bot obeys
-   (TrustedGuids works out-of-group)
+   (TrustedGuids works out-of-group). This passes only when that companion
+   bot is on your own account — for a bot on a different account, the reply
+   is "Invite me to your group first"; that is current expected behavior
+   (PlayerbotSecurity requires GM, same account, or same group), not a bug
 6. From a character NOT in `player_guids` and not grouped, whisper a command
    → chat reply, but NO action
 7. Drop a bot's sentiment below the threshold (repeated insults, or set
