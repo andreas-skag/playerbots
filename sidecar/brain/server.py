@@ -42,7 +42,10 @@ def create_app(settings: Settings | None = None, store: MemoryStore | None = Non
 
             req = parse_request(body)
             now = time.monotonic()
-            if req.bot_guid and now - last_generation.get(req.bot_guid, -1e9) < settings.per_bot_cooldown:
+            is_command_shaped = (settings.commands.enabled and req.event == "chat"
+                                 and intent_mod.looks_like_command(req.message))
+            if (not is_command_shaped and req.bot_guid
+                    and now - last_generation.get(req.bot_guid, -1e9) < settings.per_bot_cooldown):
                 return _completion("")
 
             inner = personas.is_inner_circle(req, settings)
@@ -56,8 +59,7 @@ def create_app(settings: Settings | None = None, store: MemoryStore | None = Non
                 recent, summary, score = [], "", 0.0
 
             decision = commands_mod.Decision("none", None)
-            if (settings.commands.enabled and req.event == "chat"
-                    and intent_mod.looks_like_command(req.message)):
+            if is_command_shaped:
                 decision = await commands_mod.decide(registry, ollama, settings,
                                                      store, req)
 

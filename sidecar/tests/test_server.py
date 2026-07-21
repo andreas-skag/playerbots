@@ -135,11 +135,11 @@ def command_body(msg="can you tank this dungeon?", bot_guid="42", channel="in pa
     return b
 
 
-def make_command_client(tmp_path, fake):
+def make_command_client(tmp_path, fake, per_bot_cooldown=0.0):
     from brain.settings import CommandSettings
     settings = Settings(db_path=":memory:", request_log=str(tmp_path / "req.jsonl"),
                         templates_dir="templates", summarize_after=1000,
-                        per_bot_cooldown=0.0, player_guids=["7"],
+                        per_bot_cooldown=per_bot_cooldown, player_guids=["7"],
                         commands=CommandSettings())
     store = MemoryStore(":memory:")
     app = create_app(settings=settings, store=store, ollama=fake)
@@ -179,3 +179,25 @@ def test_refusal_has_no_directive_but_refusal_context(tmp_path):
     assert "directive" not in r
     chat_system = [c for c in fake.calls if c[2] is None][0][0][0]["content"]
     assert "refusing" in chat_system
+
+
+def test_command_bypasses_per_bot_cooldown(tmp_path):
+    # A long per-bot cooldown must not swallow a command-shaped message: if
+    # it did, the addressed/best-fit bot's directive would never be
+    # produced, and since every other bot also computed the busy bot as
+    # actor, nobody would take over either.
+    fake = FakeOllama(reply="Fine, I'll keep it busy.",
+                      intent_reply='{"verb": "role_tank", "args": {}, "addressed": ""}')
+    client, _ = make_command_client(tmp_path, fake, per_bot_cooldown=1000.0)
+
+    banter = client.post("/v1/chat/completions",
+                         json=command_body(msg="lovely day in the barrens")).json()
+    assert banter["choices"][0]["message"]["content"] != ""  # arms the cooldown
+
+    r = client.post("/v1/chat/completions", json=command_body()).json()
+    assert r["directive"] == {"verb": "role_tank"}
+    assert r["choices"][0]["message"]["content"] != ""
+
+    r2 = client.post("/v1/chat/completions",
+                     json=command_body(msg="lovely day in the barrens")).json()
+    assert r2["choices"][0]["message"]["content"] == ""  # banter still cooled down
