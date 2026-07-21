@@ -5,7 +5,7 @@ from brain import intent
 from brain.request_parser import parse_request
 
 
-def _req(msg, group="Andreas:7:Paladin:60;Grimtok:42:Warrior:60"):
+def _req(msg, group="Andreas:7:paladin:60;Grimtok:42:warrior:60"):
     return parse_request({
         "messages": [{"role": "user", "content": f"Andreas:{msg}"}],
         "meta": {"bot_guid": "42", "bot_name": "Grimtok", "other_guid": "7",

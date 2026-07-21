@@ -6,7 +6,7 @@ from brain.memory import MemoryStore
 from brain.request_parser import parse_request
 from brain.settings import CommandSettings, Settings
 
-ROSTER = "Andreas:7:Paladin:60;Grimtok:42:Warrior:60;Zinnia:43:Priest:58"
+ROSTER = "Andreas:7:paladin:60;Grimtok:42:warrior:60;Zinnia:43:priest:58"
 
 
 def _req(msg="can someone tank?", bot_guid="42", other_guid="7",
@@ -149,3 +149,19 @@ def test_empty_roster_degrades_to_acting_self():
     d = _decide(commands.DedupRegistry(3.0), FakeOllama(), _settings(),
                 MemoryStore(":memory:"), _req(group=""))
     assert d.role == "actor"
+
+
+def test_best_fit_matches_lowercase_wire_classes():
+    # The real C++ producer (ChatHelper::formatClass) sends lowercase class
+    # names. Guids are chosen so the warrior does NOT have the lowest guid
+    # among candidates, so a case-sensitive compare falling back to
+    # min(guid) would (wrongly) pick the priest instead of matching class.
+    roster = "Andreas:7:paladin:60;Grimtok:45:warrior:60;Zinnia:43:priest:58"
+    registry = commands.DedupRegistry(3.0)
+    fake = FakeOllama()
+    store = MemoryStore(":memory:")
+    warrior = _decide(registry, fake, _settings(), store, _req(bot_guid="45", group=roster))
+    priest = _decide(registry, fake, _settings(), store, _req(bot_guid="43", group=roster))
+    assert warrior.role == "actor"
+    assert warrior.intent.verb == "role_tank"
+    assert priest.role == "bystander"

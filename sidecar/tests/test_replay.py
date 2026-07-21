@@ -7,7 +7,7 @@ from brain.settings import Settings
 
 
 class FakeOllama:
-    async def chat(self, messages, tier="inner"):
+    async def chat(self, messages, tier="inner", format=None):
         return "replayed reply"
 
 

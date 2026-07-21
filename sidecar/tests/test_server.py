@@ -74,7 +74,7 @@ def test_second_message_sees_history(tmp_path):
 
 def test_ollama_failure_returns_empty_content(tmp_path):
     class Exploding:
-        async def chat(self, messages, tier="inner"):
+        async def chat(self, messages, tier="inner", format=None):
             raise RuntimeError("ollama down")
     client, store = make_client(tmp_path, Exploding())
     r = client.post("/v1/chat/completions", json=body())
@@ -109,7 +109,7 @@ def test_failed_generation_does_not_start_cooldown(tmp_path):
         def __init__(self):
             self.calls = 0
 
-        async def chat(self, messages, tier="inner"):
+        async def chat(self, messages, tier="inner", format=None):
             self.calls += 1
             if self.calls == 1:
                 raise RuntimeError("ollama down")
@@ -124,7 +124,7 @@ def test_failed_generation_does_not_start_cooldown(tmp_path):
     assert flaky.calls == 2
 
 
-GROUP = "Andreas:7:Paladin:60;Grimtok:42:Warrior:60;Zinnia:43:Priest:58"
+GROUP = "Andreas:7:paladin:60;Grimtok:42:warrior:60;Zinnia:43:priest:58"
 
 
 def command_body(msg="can you tank this dungeon?", bot_guid="42", channel="in party chat"):

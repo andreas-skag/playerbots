@@ -118,7 +118,7 @@ def _pick_actor(req: BotRequest, intent: Intent, settings: Settings) -> int:
         return req.bot_guid if not req.group else 0
     for cls in _CLASS_FIT.get(intent.verb, []):
         for m in sorted(candidates, key=lambda m: m.guid):
-            if m.cls == cls:
+            if m.cls.lower() == cls.lower():
                 return m.guid
     return min(c.guid for c in candidates)
 

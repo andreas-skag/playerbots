@@ -86,12 +86,16 @@ def _body_with_group(group):
 
 
 def test_group_roster_parsed():
+    # The real producer sends lowercase class names, but the parser must not
+    # normalize case — it stores whatever arrives verbatim. Class-name
+    # comparisons are case-insensitive downstream (brain/commands.py), so we
+    # deliberately mix case here to prove the parser passes it through as-is.
     req = parse_request(_body_with_group(
-        "Andreas:7:Paladin:60;Grimtok:42:Warrior:60;Zinnia:43:Priest:58"))
+        "Andreas:7:Paladin:60;Grimtok:42:warrior:60;Zinnia:43:priest:58"))
     assert req.group == [
         GroupMember(name="Andreas", guid=7, cls="Paladin", level=60),
-        GroupMember(name="Grimtok", guid=42, cls="Warrior", level=60),
-        GroupMember(name="Zinnia", guid=43, cls="Priest", level=58),
+        GroupMember(name="Grimtok", guid=42, cls="warrior", level=60),
+        GroupMember(name="Zinnia", guid=43, cls="priest", level=58),
     ]
 
 
@@ -104,5 +108,5 @@ def test_group_missing_or_placeholder_is_empty():
 
 
 def test_group_malformed_entries_skipped():
-    req = parse_request(_body_with_group("Broken;Andreas:7:Paladin:60;A:B:C:D"))
-    assert req.group == [GroupMember(name="Andreas", guid=7, cls="Paladin", level=60)]
+    req = parse_request(_body_with_group("Broken;Andreas:7:paladin:60;A:B:C:D"))
+    assert req.group == [GroupMember(name="Andreas", guid=7, cls="paladin", level=60)]
