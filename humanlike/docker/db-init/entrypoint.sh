@@ -11,15 +11,14 @@ mysql_root() {
     mariadb -h "$MYSQL_HOST" -u root -p"$ROOT_PW" -N -B -e "$1"
 }
 
-# Sentinel: world DB exists and creature_template is populated
-count=$(mysql_root "SELECT COUNT(*) FROM information_schema.tables \
-    WHERE table_schema='classicmangos' AND table_name='creature_template'" || echo 0)
-if [ "$count" = "1" ]; then
-    rows=$(mysql_root "SELECT COUNT(*) FROM classicmangos.creature_template" || echo 0)
-    if [ "$rows" -gt 0 ]; then
-        echo "db-init: world DB already populated ($rows creature templates) - nothing to do"
-        exit 0
-    fi
+# Sentinel: only a fully completed install writes this marker table.
+# A partial install (crash mid-run) leaves no marker, so init re-runs;
+# the DeleteAll invocation below makes reruns safe.
+marker=$(mysql_root "SELECT COUNT(*) FROM information_schema.tables \
+    WHERE table_schema='classicmangos' AND table_name='_dbinit_complete'" || echo 0)
+if [ "$marker" = "1" ]; then
+    echo "db-init: install marker present - nothing to do"
+    exit 0
 fi
 
 echo "db-init: installing full classic-db (this takes a few minutes)..."
@@ -46,4 +45,6 @@ FORCE_WAIT="NO"
 EOF
 
 ./InstallFullDB.sh -InstallAll root "$ROOT_PW" DeleteAll
+mysql_root "CREATE TABLE IF NOT EXISTS classicmangos._dbinit_complete (completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+mysql_root "INSERT INTO classicmangos._dbinit_complete () VALUES ()"
 echo "db-init: done"
