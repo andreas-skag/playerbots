@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+# One-shot database initializer: classic-db + core sql tree + installer script.
+# Build context = repo root. CLASSICDB_REF pinned to master-at-build-time
+# (classic-db only moves forward); the resolved SHA is recorded in a label.
+FROM debian:bookworm-slim AS clone
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 https://github.com/cmangos/classic-db.git /classic-db \
+    && git -C /classic-db rev-parse HEAD > /classic-db/.pinned-ref
+
+FROM humanlike-docker-server-sqlsource AS sqlsource
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    mariadb-client bash \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=clone /classic-db /classic-db
+COPY --from=sqlsource /core-tree /core-tree
+COPY humanlike/docker/db-init/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
