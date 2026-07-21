@@ -1,0 +1,93 @@
+name: humanlike-playerbots
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"   # pick-bots.ps1 reaches it from Windows
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # Build-only service: exposes Dockerfile.server's sqlsource stage as a
+  # named image so Dockerfile.dbinit can COPY --from it.
+  sqlsource:
+    image: humanlike-docker-server-sqlsource
+    build:
+      context: ../..
+      dockerfile: humanlike/docker/Dockerfile.server
+      target: sqlsource
+      args:
+        CMANGOS_REF: ${CMANGOS_REF:-}
+    profiles: ["build-only"]
+
+  db-init:
+    build:
+      context: ../..
+      dockerfile: humanlike/docker/Dockerfile.dbinit
+    environment:
+      MYSQL_HOST: db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MANGOS_DB_PASSWORD: ${MANGOS_DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  realmd:
+    build: &serverbuild
+      context: ../..
+      dockerfile: humanlike/docker/Dockerfile.server
+      args:
+        CMANGOS_REF: ${CMANGOS_REF:-}
+    command: ["./realmd", "-c", "/opt/mangos/etc/realmd.conf"]
+    volumes:
+      - ./conf:/opt/mangos/etc:ro
+    ports:
+      - "3724:3724"
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  mangosd:
+    build: *serverbuild
+    command: ["./mangosd", "-c", "/opt/mangos/etc/mangosd.conf"]
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./conf:/opt/mangos/etc:ro
+      - ${CLIENT_DATA_DIR}:/data:ro
+    ports:
+      - "8085:8085"
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      sidecar:
+        condition: service_started
+    restart: unless-stopped
+
+  sidecar:
+    build:
+      context: ../..
+      dockerfile: humanlike/docker/Dockerfile.sidecar
+    volumes:
+      - ./conf/config.toml:/app/config.toml:ro
+      - sidecar-data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # no-op on Docker Desktop, needed on Linux
+    restart: unless-stopped
+
+volumes:
+  dbdata:
+  sidecar-data:
