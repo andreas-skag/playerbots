@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 from brain import commands
 from brain.intent import Intent
@@ -149,6 +150,22 @@ def test_empty_roster_degrades_to_acting_self():
     d = _decide(commands.DedupRegistry(3.0), FakeOllama(), _settings(),
                 MemoryStore(":memory:"), _req(group=""))
     assert d.role == "actor"
+
+
+def test_actor_tag_outlives_dedup_window():
+    # A bot's spoken acknowledgment reaches other bots 5-15s later (LLM
+    # generation + C++ typing delay), well after the short dedup window
+    # expires. The cascade guard must use its own, much longer TTL so it
+    # still blocks that late-arriving echo from being treated as a new
+    # command.
+    registry = commands.DedupRegistry(0.01, actor_ttl_s=3.0)
+    store = MemoryStore(":memory:")
+    first = _decide(registry, FakeOllama(), _settings(), store, _req(bot_guid="42"))
+    assert first.role == "actor"
+    time.sleep(0.05)  # dedup window (0.01s) has now expired
+    fake = FakeOllama()
+    d = _decide(registry, fake, _settings(), store, _req(bot_guid="43", other_guid="42"))
+    assert d.role == "none" and fake.calls == 0
 
 
 def test_best_fit_matches_lowercase_wire_classes():

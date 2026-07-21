@@ -61,8 +61,9 @@ class Decision:
 
 
 class DedupRegistry:
-    def __init__(self, window_s: float):
+    def __init__(self, window_s: float, actor_ttl_s: float = 45.0):
         self.window_s = window_s
+        self.actor_ttl_s = actor_ttl_s
         self._intents: dict[tuple, tuple[float, asyncio.Future]] = {}
         self._actors: dict[int, float] = {}
 
@@ -70,7 +71,7 @@ class DedupRegistry:
         self._intents = {k: v for k, v in self._intents.items()
                          if now - v[0] < self.window_s}
         self._actors = {k: v for k, v in self._actors.items()
-                        if now - v < self.window_s}
+                        if now - v < self.actor_ttl_s}
 
     async def get_or_classify(self, key: tuple, coro_factory):
         now = time.monotonic()

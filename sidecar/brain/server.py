@@ -30,7 +30,8 @@ def create_app(settings: Settings | None = None, store: MemoryStore | None = Non
     app = FastAPI()
 
     last_generation: dict[int, float] = {}
-    registry = commands_mod.DedupRegistry(settings.commands.dedup_window_s)
+    registry = commands_mod.DedupRegistry(settings.commands.dedup_window_s,
+                                          settings.commands.actor_ttl_s)
 
     @app.post("/v1/chat/completions")
     async def complete(request: Request, background_tasks: BackgroundTasks):

@@ -10,6 +10,7 @@ class CommandSettings:
     always_obey: bool = False
     sentiment_threshold: float = -25.0
     dedup_window_s: float = 3.0
+    actor_ttl_s: float = 45.0
     allow_bot_commanders: bool = True
 
 

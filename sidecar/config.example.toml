@@ -20,4 +20,8 @@ enabled = true               # master switch for conversational commands
 always_obey = false          # true = skip sentiment-based refusals
 sentiment_threshold = -25.0  # refuse commands from speakers below this score
 dedup_window_s = 3.0         # window for one-actor-per-utterance dedup
+actor_ttl_s = 45.0           # how long a bot that just executed a command is
+                              # barred from commanding others (cascade guard);
+                              # must outlast LLM generation + typing delay
+                              # before its ack reaches other bots
 allow_bot_commanders = true  # bots may command each other within the group
