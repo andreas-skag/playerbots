@@ -10,6 +10,10 @@ powershell -ExecutionPolicy Bypass -File setup.ps1
 .EXAMPLE
 powershell -ExecutionPolicy Bypass -File setup.ps1 -Milestone M2
 #>
+
+# DEPRECATED (2026-07-21): the native-Windows flow is no longer maintained.
+# Use the Docker runtime instead: humanlike/docker/README.md
+
 [CmdletBinding()]
 param(
     [ValidateSet("M1", "M2")]

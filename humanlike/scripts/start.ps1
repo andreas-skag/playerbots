@@ -6,6 +6,12 @@ powershell -ExecutionPolicy Bypass -File start.ps1
 .EXAMPLE
 powershell -ExecutionPolicy Bypass -File start.ps1 -Server
 #>
+
+# DEPRECATED (2026-07-21): the native-Windows flow is no longer maintained.
+# Use the Docker runtime instead: humanlike/docker/README.md
+# (Known issue left as-is: this flow put the sidecar on port 8085, which
+# collides with mangosd's world port.)
+
 [CmdletBinding()]
 param(
     [switch]$Server,
