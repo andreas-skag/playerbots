@@ -1,0 +1,14 @@
+# Sidecar (brain) image. Build context = repo root:
+#   docker compose build sidecar
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY sidecar/pyproject.toml ./
+COPY sidecar/brain ./brain
+COPY sidecar/templates ./templates
+RUN pip install --no-cache-dir .
+
+# config.toml is mounted at /app/config.toml (compose); brain.db lives on the
+# /app/data volume via db_path in that config.
+EXPOSE 8000
+CMD ["uvicorn", "--factory", "brain.server:create_app", "--host", "0.0.0.0", "--port", "8000"]
