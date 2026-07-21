@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # One-shot database initializer: classic-db + core sql tree + installer script.
 # Build context = repo root. CLASSICDB_REF pinned to master-at-build-time
-# (classic-db only moves forward); the resolved SHA is recorded in a label.
+# (classic-db only moves forward); the resolved SHA is recorded in /classic-db/.pinned-ref inside the image.
 FROM debian:bookworm-slim AS clone
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*

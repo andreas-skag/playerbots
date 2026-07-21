@@ -26,7 +26,6 @@ echo "db-init: installing full classic-db (this takes a few minutes)..."
 cd /classic-db
 
 cat > InstallFullDB.config <<EOF
-DB_HOST="$MYSQL_HOST"
 MYSQL_HOST="$MYSQL_HOST"
 MYSQL_PORT="3306"
 MYSQL_USERNAME="mangos"
@@ -36,8 +35,8 @@ WORLD_DB_NAME="classicmangos"
 REALM_DB_NAME="classicrealmd"
 CHAR_DB_NAME="classiccharacters"
 LOGS_DB_NAME="classiclogs"
-MYSQL_PATH=""
-MYSQL_DUMP_PATH=""
+MYSQL_PATH="mariadb"
+MYSQL_DUMP_PATH="mariadb-dump"
 CORE_PATH="/core-tree"
 LOCALES="YES"
 DEV_UPDATES="NO"
@@ -46,5 +45,5 @@ PLAYERBOTS_DB="YES"
 FORCE_WAIT="NO"
 EOF
 
-./InstallFullDB.sh -InstallAll root "$ROOT_PW"
+./InstallFullDB.sh -InstallAll root "$ROOT_PW" DeleteAll
 echo "db-init: done"
