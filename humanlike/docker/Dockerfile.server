@@ -4,7 +4,10 @@
 #   docker compose build mangosd
 # First build ~30-60 min; later builds reuse the ccache mount.
 
-ARG CMANGOS_REF=de8f72993b9e1faa1bf92dd5505f3daec5cea3ce
+# Pinned core commit. Overridable via CMANGOS_REF in .env; the pin lives in
+# the RUN below because compose passes an EMPTY build arg when unset, which
+# would override any ARG default here.
+ARG CMANGOS_REF=""
 
 # ---------- build stage ----------
 FROM debian:bookworm-slim AS build
@@ -20,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Core at the pinned ref (zlib >=1.3.2 is FetchContent'd by the core cmake;
 # network is available during build)
 RUN git clone https://github.com/cmangos/mangos-classic.git /src/core \
-    && git -C /src/core checkout "${CMANGOS_REF}"
+    && git -C /src/core checkout "${CMANGOS_REF:-de8f72993b9e1faa1bf92dd5505f3daec5cea3ce}"
 
 # This fork IS the module; the core requires it in-tree BEFORE cmake
 # (out-of-tree add_subdirectory lacks a binary dir)

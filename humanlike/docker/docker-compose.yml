@@ -41,6 +41,7 @@ services:
     restart: "no"
 
   realmd:
+    image: humanlike-docker-server
     build: &serverbuild
       context: ../..
       dockerfile: humanlike/docker/Dockerfile.server
@@ -59,6 +60,7 @@ services:
     restart: unless-stopped
 
   mangosd:
+    image: humanlike-docker-server
     build: *serverbuild
     command: ["./mangosd", "-c", "/opt/mangos/etc/mangosd.conf"]
     tty: true
