@@ -4,6 +4,12 @@ Companion files for the design in
 `docs/superpowers/specs/2026-07-19-humanlike-llm-bots-design.md`.
 All steps below run on the **target Windows machine** (RTX 3090).
 
+> **Starting from a blank machine?** Follow
+> [SETUP-FROM-SCRATCH.md](SETUP-FROM-SCRATCH.md) — the end-to-end
+> walkthrough for the Docker runtime (the recommended path). The
+> milestone sections below remain the reference for the individual
+> checklists and the deprecated native-Windows flow.
+
 ## Milestone 1 — LLM chat direct to Ollama (no code changes)
 
 ### Automated setup (recommended)
